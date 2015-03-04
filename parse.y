@@ -54,7 +54,8 @@
         /* define the type of the Yacc stack element to be TOKEN */
 
 #define YYSTYPE TOKEN
-
+#define STDEBUG 1
+           //structure debug token
 TOKEN parseresult;
 
 %}
@@ -76,32 +77,85 @@ TOKEN parseresult;
 
 
 %%
+/* I tried to maximize readability */
 
-  program    :  statement DOT                  { parseresult = $1; }
-             ;
-  statement  :  BEGINBEGIN statement endpart
-                                       { $$ = makeprogn($1,cons($2, $3)); }
-             |  IF expr THEN statement endif   { $$ = makeif($1, $2, $4, $5); }
-             |  assignment
-             ;
-  endpart    :  SEMICOLON statement endpart    { $$ = cons($2, $3); }
-             |  END                            { $$ = NULL; }
-             ;
-  endif      :  ELSE statement                 { $$ = $2; }
-             |  /* empty */                    { $$ = NULL; }
-             ;
-  assignment :  IDENTIFIER ASSIGN expr         { $$ = binop($2, $1, $3); }
-             ;
-  expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
-             |  term 
-             ;
-  term       :  term TIMES factor              { $$ = binop($2, $1, $3); }
-             |  factor
-             ;
-  factor     :  LPAREN expr RPAREN             { $$ = $2; }
-             |  IDENTIFIER
-             |  NUMBER
-             ;
+program : 
+PROGRAM IDENTIFIER LPAREN idList RPAREN SEMICOLON block DOT
+{
+  if(STDEBUG) printf("PROGRAM :\n");
+  parseresult = $1;
+};
+
+block :
+preBlock BEGINBEGIN statement END
+{
+  if(STDEBUG) printf("BLOCK\n");
+};
+preBlock :
+varBlock preBlock
+|
+;
+varBlock :
+VAR IDENTIFIER COLON IDENTIFIER SEMICOLON
+{
+  if(STDEBUG) printf("VAR DECLARE\n");
+};
+statement:
+assignment|
+;
+assignment:
+IDENTIFIER ASSIGN expression
+{
+  if(STDEBUG) printf("ASSIGNMENT \n");
+};
+expression :
+NUMBER;
+
+numberList:
+NUMBER
+|
+NUMBER COMMA NUMBER
+;
+
+// idList = id, id, ..., id
+idList : 
+IDENTIFIER 
+{
+  //get id
+}
+|
+idList COMMA IDENTIFIER
+{
+
+}
+
+  // program    :  statement DOT                  { parseresult = $1; }
+  //             |
+  //            ;
+  // statement  :  BEGINBEGIN statement endpart
+  //                                      { $$ = makeprogn($1,cons($2, $3)); }
+  //            |
+  //            |  IF expr THEN statement endif   { $$ = makeif($1, $2, $4, $5); }
+  //            |  assignment
+  //            ;
+  // endpart    :  SEMICOLON statement endpart    { $$ = cons($2, $3); }
+  //            |  END                            { $$ = NULL; }
+  //            ;
+  // endif      :  ELSE statement                 { $$ = $2; }
+  //            |  /* empty */                    { $$ = NULL; }
+  //            ;
+  // assignment :  IDENTIFIER ASSIGN expr         { $$ = binop($2, $1, $3); }
+  //            ;
+  // expr       :  expr PLUS term                 { $$ = binop($2, $1, $3); }
+  //            |  term 
+  //            ;
+  // term       :  term TIMES factor              { $$ = binop($2, $1, $3); }
+  //            |  factor
+  //            ;
+  // factor     :  LPAREN expr RPAREN             { $$ = $2; }
+  //            |  IDENTIFIER
+  //            |  NUMBER
+  //            ;
 
 %%
 
@@ -135,17 +189,20 @@ TOKEN cons(TOKEN item, TOKEN list)           /* add item to front of list */
   }
 
 TOKEN binop(TOKEN op, TOKEN lhs, TOKEN rhs)        /* reduce binary operator */
-  { op->operands = lhs;          /* link operands to operator       */
-    lhs->link = rhs;             /* link second operand to first    */
-    rhs->link = NULL;            /* terminate operand list          */
-    if (DEBUG & DB_BINOP)
-       { printf("binop\n");
-         dbugprinttok(op);
-         dbugprinttok(lhs);
-         dbugprinttok(rhs);
-       };
-    return op;
-  }
+{
+  //printf("%d", op->whichval);
+
+  op->operands = lhs;          /* link operands to operator       */
+  lhs->link = rhs;             /* link second operand to first    */
+  rhs->link = NULL;            /* terminate operand list          */
+  if (DEBUG & DB_BINOP)
+     { printf("binop\n");
+       dbugprinttok(op);
+       dbugprinttok(lhs);
+       dbugprinttok(rhs);
+     };
+  return op;
+}
 
 TOKEN makeif(TOKEN tok, TOKEN exp, TOKEN thenpart, TOKEN elsepart)
   {  tok->tokentype = OPERATOR;  /* Make it look like an operator   */
@@ -189,8 +246,8 @@ main()
   { int res;
     initsyms();
     res = yyparse();
-    printst();
-    printf("yyparse result = %8d\n", res);
-    if (DEBUG & DB_PARSERES) dbugprinttok(parseresult);
-    ppexpr(parseresult);           /* Pretty-print the result tree */
+    //printst();
+    //printf("yyparse result = %8d\n", res);
+    //if (DEBUG & DB_PARSERES) dbugprinttok(parseresult);
+    //ppexpr(parseresult);           /* Pretty-print the result tree */
   }
